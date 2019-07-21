@@ -1,0 +1,574 @@
+- name: "SCORED | 1.1.1.8 | PATCH | Ensure mounting of FAT filesystems is disabled"
+  lineinfile:
+      dest: /etc/modprobe.d/CIS.conf
+      regexp: "^(#)?install vfat(\\s|$)"
+      line: "install vfat /bin/true"
+      create: yes
+  when:
+      - cis_control_1_1_1_8
+  tags:
+      - level1
+      - scored
+      - patch
+      - rule_1.1.1.8
+      - vfat
+
+- name: "SCORED | 1.1.1.8 | PATCH | Remove FAT module"
+  modprobe:
+    name: vfat
+    state: absent
+  when:
+      - cis_control_1_1_1_8
+  tags:
+      - level2
+      - scored
+      - patch
+      - rule_1.1.1.8
+      - vfat
+
+- name: "SCORED | 1.1.2 | PATCH | Ensure separate partition exists for /tmp | enable and start/restart tmp.mount"
+  systemd:
+      name: tmp.mount
+      daemon_reload: yes
+      enabled: yes
+      masked: no
+      state: started
+  when:
+      - cis_control_1_1_2
+  tags:
+      - level2
+      - scored
+      - patch
+      - rule_1.1.2
+
+- name: "SCORED | 1.1.6 | PATCH | Ensure separate partition exists for /var"
+  shell: mount | grep "on /var "
+  register: var_mounted
+  changed_when: no
+  failed_when: no
+  when:
+      - cis_control_1_1_6
+  tags:
+      - level2
+      - scored
+      - patch
+      - rule_1.1.6
+      - skip_ansible_lint
+
+- name: "SCORED | 1.1.7 | PATCH | Ensure separate partition exists for /var/tmp"
+  shell: mount | grep "on /var/tmp "
+  register: var_tmp_mounted
+  changed_when: no
+  failed_when: no
+  when:
+      - cis_control_1_1_7
+  tags:
+      - level2
+      - scored
+      - patch
+      - rule_1.1.7
+      - skip_ansible_lint
+
+- name: "SCORED | 1.1.11 | PATCH | Ensure separate partition exists for /var/log"
+  shell: mount | grep "on /var/log "
+  register: var_log_mounted
+  changed_when: no
+  failed_when: no
+  when:
+      - cis_control_1_1_11
+  tags:
+      - level2
+      - scored
+      - patch
+      - rule_1.1.11
+      - skip_ansible_lint
+
+- name: "SCORED | 1.1.12 | PATCH | Ensure separate partition exists for /var/log/audit"
+  shell: mount | grep "on /var/log/audit "
+  register: var_log_audit_mounted
+  changed_when: no
+  failed_when: no
+  when:
+      - cis_control_1_1_12
+  tags:
+      - level2
+      - scored
+      - patch
+      - rule_1.1.12
+      - skip_ansible_lint
+
+- name: "SCORED | 1.1.13 | PATCH | Ensure separate partition exists for /home"
+  shell: mount | grep "on /home"
+  register: home_mounted
+  changed_when: no
+  failed_when: no
+  when:
+      - cis_control_1_1_13
+  tags:
+      - level2
+      - scored
+      - patch
+      - rule_1.1.13
+      - skip_ansible_lint
+
+- name: "SCORED | 1.1.22 | PATCH | Disable Automounting"
+  service:
+      name: autofs
+      enabled: no
+  when:
+      - cis_control_allow_autofs == false and autofs_service_status.stdout == "loaded"
+      - cis_control_1_1_22
+  tags:
+      - level1
+      - patch
+      - rule_1.1.22
+
+- name: "NOTSCORED | 1.2.5 | PATCH | Disable the rhnsd Daemon"
+  service:
+      name: rhnsd
+      state: stopped
+      enabled: no
+  when:
+      - ansible_distribution == "RedHat" and rhnsd_service_status.stdout == "loaded" and not cis_control_rhnsd_required
+      - cis_control_1_2_5
+  tags:
+      - level2
+      - notscored
+      - patch
+      - rule_1.2.5
+
+- name: "SCORED | 1.6.1.1 | PATCH | Ensure SELinux is not disabled in bootloader configuration"
+  replace:
+      dest: /etc/default/grub
+      regexp: '(selinux|enforcing)\s*=\s*0\s*'
+      follow: yes
+  register: selinux_grub_patch
+  ignore_errors: yes
+  notify: generate new grub config
+  when:
+      - cis_control_1_6_1_1
+  tags:
+      - level2
+      - scored
+      - patch
+      - rule_1.6.1.1
+
+- name: "SCORED | 1.6.1.2 | PATCH | Ensure the SELinux state is enforcing"
+  selinux:
+      conf: /etc/selinux/config
+      policy: "{{ cis_control_selinux_pol }}"
+      state: enforcing
+  when:
+      - not cis_control_selinux_disable
+      - cis_control_1_6_1_2
+  tags:
+      - level2
+      - scored
+      - selinux
+      - patch
+      - rule_1.6.1.2
+
+- name: "SCORED | 1.6.1.3 | PATCH | Ensure SELinux policy is configured"
+  selinux:
+      conf: /etc/selinux/config
+      policy: "{{ cis_control_selinux_pol }}"
+      state: enforcing
+  when:
+      - not cis_control_selinux_disable
+      - cis_control_1_6_1_3
+  tags:
+      - level2
+      - scored
+      - selinux
+      - patch
+      - rule_1.6.1.3
+
+- name: "SCORED | 1.6.1.4 | PATCH | Ensure SETroubleshoot is not installed"
+  yum:
+      name: setroubleshoot
+      state: absent
+  when:
+      - cis_control_1_6_1_4
+  tags:
+      - level2
+      - scored
+      - selinux
+      - patch
+      - rule_1.6.1.4
+
+- name: "SCORED | 1.6.1.5 | PATCH | Ensure the MCS Translation Service (mcstrans) is not installed"
+  yum:
+      name: mcstrans
+      state: absent
+  when:
+      - cis_control_1_6_1_5
+  tags:
+      - level2
+      - scored
+      - patch
+      - rule_1.6.1.5
+
+- name: "SCORED | 1.6.2 | PATCH | Ensure SELinux is installed"
+  yum:
+      name: libselinux
+      state: present
+  when:
+      - cis_control_1_6_2
+  tags:
+      - level2
+      - scored
+      - patch
+      - rule_1.6.2
+
+- name: "NOTSCORED | 3.7 | PATCH | Ensure wireless interfaces are disabled"
+  command: /bin/true
+  changed_when: no
+  tags:
+      - level1
+      - level2
+      - patch
+      - rule_3.7
+
+- name: "NOTSCORED | 4.1.1.1 | PATCH | Ensure audit log storage size is configured"
+  lineinfile:
+      dest: /etc/audit/auditd.conf
+      regexp: "^max_log_file( |=)"
+      line: "max_log_file = 10"
+      state: present
+  when:
+      - cis_control_4_1_1_1
+  notify: restart auditd
+  tags:
+      - level2
+      - auditd
+      - patch
+      - rule_4.1.1.1
+
+- name: "SCORED | 4.1.1.2 | PATCH | Ensure system is disabled when audit logs are full"
+  lineinfile:
+      dest: /etc/audit/auditd.conf
+      regexp: "^admin_space_left_action"
+      line: "admin_space_left_action = {{ cis_control_auditd['admin_space_left_action'] }}"
+      state: present
+  when:
+      - cis_control_4_1_1_2
+  notify: restart auditd
+  tags:
+      - level2
+      - auditd
+      - patch
+      - rule_4.1.1.2
+
+- name: "SCORED | 4.1.1.2 | PATCH | Ensure email on non-admin audit space alert"
+  lineinfile:
+      dest: /etc/audit/auditd.conf
+      regexp: "^space_left_action"
+      line: "space_left_action = email"
+      state: present
+  when:
+      - cis_control_4_1_1_2
+  notify: restart auditd
+  tags:
+      - level2
+      - auditd
+      - patch
+      - rule_4.1.1.2
+
+- name: "SCORED | 4.1.1.3 | PATCH | Ensure audit logs are not automatically deleted"
+  lineinfile:
+      dest: /etc/audit/auditd.conf
+      regexp: "^max_log_file_action"
+      line: "max_log_file_action = {{ cis_control_auditd['max_log_file_action'] }}"
+      state: present
+  when:
+      - cis_control_4_1_1_3
+  notify: restart auditd
+  tags:
+      - level2
+      - auditd
+      - patch
+      - rule_4.1.1.3
+
+- name: "SCORED | 4.1.2 | PATCH | Ensure auditd service is enabled"
+  service:
+      name: auditd
+      state: started
+      enabled: yes
+  when:
+      - cis_control_skip_for_travis == false
+      - cis_control_4_1_2
+  tags:
+      - level2
+      - auditd
+      - patch
+      - rule_4.1.2
+
+- name: "SCORED | 4.1.3 | PATCH | Ensure auditing for processes that start prior to auditd is enabled"
+  replace:
+      dest: /etc/default/grub
+      regexp: '(^GRUB_CMDLINE_LINUX\s*\=\s*)(?:")(.+)(?<!audit=1)(?:")'
+      replace: '\1"\2 audit=1"'
+      follow: yes
+  ignore_errors: yes
+  notify: generate new grub config
+  when:
+      - cis_control_4_1_3
+  tags:
+      - level2
+      - auditd
+      - patch
+      - rule_4.1.3
+
+- name: "SCORED | 4.1.4 | PATCH | Ensure events that modify date and time information are collected"
+  template:
+      src: audit/cis_control_4_1_4.rules.j2
+      dest: /etc/audit/rules.d/cis_control_4_1_4.rules
+      owner: root
+      group: root
+      mode: 0600
+  when:
+      - cis_control_4_1_4
+  notify: restart auditd
+  tags:
+      - level2
+      - auditd
+      - patch
+      - rule_4.1.4
+
+- name: "SCORED | 4.1.5 | PATCH | Ensure events that modify user/group information are collected"
+  template:
+      src: audit/cis_control_4_1_5.rules.j2
+      dest: /etc/audit/rules.d/cis_control_4_1_5.rules
+      owner: root
+      group: root
+      mode: 0600
+  when:
+      - cis_control_4_1_5
+  notify: restart auditd
+  tags:
+      - level2
+      - auditd
+      - patch
+      - rule_4.1.5
+
+- name: "SCORED | 4.1.6 | PATCH | Ensure events that modify the system's network environment are collected"
+  template:
+      src: audit/cis_control_4_1_6.rules.j2
+      dest: /etc/audit/rules.d/cis_control_4_1_6.rules
+      owner: root
+      group: root
+      mode: 0600
+  when:
+      - cis_control_4_1_6
+  notify: restart auditd
+  tags:
+      - level2
+      - auditd
+      - patch
+      - rule_4.1.6
+
+- name: "SCORED | 4.1.7 | PATCH | Ensure events that modify the system's Mandatory Access Controls are collected"
+  template:
+      src: audit/cis_control_4_1_7.rules.j2
+      dest: /etc/audit/rules.d/cis_control_4_1_7.rules
+      owner: root
+      group: root
+      mode: 0600
+  when:
+      - cis_control_4_1_7
+  notify: restart auditd
+  tags:
+      - level2
+      - auditd
+      - patch
+      - rule_4.1.7
+
+- name: "SCORED | 4.1.8 | PATCH | Ensure login and logout events are collected"
+  template:
+      src: audit/cis_control_4_1_8.rules.j2
+      dest: /etc/audit/rules.d/cis_control_4_1_8.rules
+      owner: root
+      group: root
+      mode: 0600
+  when:
+      - cis_control_4_1_8
+  notify: restart auditd
+  tags:
+      - level2
+      - auditd
+      - patch
+      - rule_4.1.8
+
+- name: "SCORED | 4.1.9 | PATCH | Ensure session initiation information is collected"
+  template:
+      src: audit/cis_control_4_1_9.rules.j2
+      dest: /etc/audit/rules.d/cis_control_4_1_9.rules
+      owner: root
+      group: root
+      mode: 0600
+  when:
+      - cis_control_4_1_9
+  notify: restart auditd
+  tags:
+      - level2
+      - auditd
+      - patch
+      - rule_4.1.9
+
+- name: "SCORED | 4.1.10 | PATCH | Ensure discretionary access control permission modification events are collected"
+  template:
+      src: audit/cis_control_4_1_10.rules.j2
+      dest: /etc/audit/rules.d/cis_control_4_1_10.rules
+      owner: root
+      group: root
+      mode: 0600
+  when:
+      - cis_control_4_1_10
+  notify: restart auditd
+  tags:
+      - level2
+      - auditd
+      - patch
+      - rule_4.1.10
+
+- name: "SCORED | 4.1.11 | PATCH | Ensure unsuccessful unauthorized file access attempts are collected"
+  template:
+      src: audit/cis_control_4_1_11.rules.j2
+      dest: /etc/audit/rules.d/cis_control_4_1_11.rules
+      owner: root
+      group: root
+      mode: 0600
+  when:
+      - cis_control_4_1_11
+  notify: restart auditd
+  tags:
+      - level2
+      - auditd
+      - patch
+      - rule_4.1.11
+
+- name: "SCORED | 4.1.12 | PATCH | Ensure use of privileged commands is collected"
+  shell: for i in  $(df | grep '^/dev' | awk '{ print $NF }'); do find $i -xdev -type f -perm -4000 -o -type f -perm -2000 2>/dev/null; done
+  register: priv_procs
+  changed_when: no
+  check_mode: no
+  when:
+      - cis_control_4_1_12
+  tags:
+      - level2
+      - auditd
+      - patch
+      - rule_4.1.12
+
+- name: "SCORED | 4.1.12 | PATCH | Ensure use of privileged commands is collected"
+  template:
+      src: audit/cis_control_4_1_12.rules.j2
+      dest: /etc/audit/rules.d/cis_control_4_1_12.rules
+      owner: root
+      group: root
+      mode: 0600
+  notify: restart auditd
+  when:
+      - cis_control_4_1_12
+  tags:
+      - level2
+      - auditd
+      - patch
+      - rule_4.1.12
+
+- name: "SCORED | 4.1.13 | PATCH | Ensure successful file system mounts are collected"
+  template:
+      src: audit/cis_control_4_1_13.rules.j2
+      dest: /etc/audit/rules.d/cis_control_4_1_13.rules
+      owner: root
+      group: root
+      mode: 0600
+  when:
+      - cis_control_4_1_13
+  notify: restart auditd
+  tags:
+      - level2
+      - auditd
+      - patch
+      - rule_4.1.13
+
+- name: "SCORED | 4.1.14 | PATCH | Ensure file deletion events by users are collected"
+  template:
+      src: audit/cis_control_4_1_14.rules.j2
+      dest: /etc/audit/rules.d/cis_control_4_1_14.rules
+      owner: root
+      group: root
+      mode: 0600
+  when:
+      - cis_control_4_1_14
+  notify: restart auditd
+  tags:
+      - level2
+      - auditd
+      - patch
+      - rule_4.1.14
+
+- name: "SCORED | 4.1.15 | PATCH | Ensure changes to system administration scope (sudoers) is collected"
+  template:
+      src: audit/cis_control_4_1_15.rules.j2
+      dest: /etc/audit/rules.d/cis_control_4_1_15.rules
+      owner: root
+      group: root
+      mode: 0600
+  when:
+      - cis_control_4_1_15
+  notify: restart auditd
+  tags:
+      - level2
+      - auditd
+      - patch
+      - rule_4.1.15
+
+- name: "SCORED | 4.1.16 | PATCH | Ensure system administrator actions (sudolog) are collected"
+  template:
+      src: audit/cis_control_4_1_16.rules.j2
+      dest: /etc/audit/rules.d/cis_control_4_1_16.rules
+      owner: root
+      group: root
+      mode: 0600
+  when:
+      - cis_control_4_1_16
+  notify: restart auditd
+  tags:
+      - level2
+      - auditd
+      - patch
+      - rule_4.1.16
+
+- name: "SCORED | 4.1.17 | PATCH | Ensure kernel module loading and unloading is collected"
+  template:
+      src: audit/cis_control_4_1_17.rules.j2
+      dest: /etc/audit/rules.d/cis_control_4_1_17.rules
+      owner: root
+      group: root
+      mode: 0600
+  when:
+      - cis_control_4_1_17
+  notify: restart auditd
+  tags:
+      - level2
+      - auditd
+      - patch
+      - rule_4.1.17
+
+- name: "SCORED | 4.1.18 | PATCH | Ensure the audit configuration is immutable"
+  template:
+      src: audit/cis_control_4_1_18.rules.j2
+      dest: /etc/audit/rules.d/cis_control_4_1_18.rules
+      owner: root
+      group: root
+      mode: 0600
+  when:
+      - cis_control_4_1_18
+  notify: restart auditd
+  tags:
+      - level2
+      - auditd
+      - patch
+      - rule_4.1.18
+      
